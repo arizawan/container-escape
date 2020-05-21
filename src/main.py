@@ -154,7 +154,7 @@ def run_container():
     if 'id' in session:
         challenge = session['id'].split('-')[0]
 
-        if challenge in enabled_challenges:
+        if challenge in enabled_challenges and not utils.container_exists(client, session['id']):
             try:
                 threading.Thread(
                     target=enabled_challenges[challenge].run_instance,

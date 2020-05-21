@@ -115,3 +115,11 @@ def setup_logger():
     handler.setFormatter(formatter)
     app.logger.addHandler(handler)
     app.logger.setLevel(logging.DEBUG)
+
+
+def container_exists(client, session_id):
+    for container in client.containers.list():
+        if container.name == session_id:
+            app.logger.debug(f'container {container.name} that user tries to spawn already exists')
+            return True
+    return False
