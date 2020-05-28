@@ -115,16 +115,16 @@ def challenge_page(challenge):
     if challenge not in enabled_challenges:
         abort(404)
 
-    if 'id' not in session:
-        random_id = challenge + '-' + utils.generate_id()
-        session['id'] = random_id
-    else:
+    if 'id' in session and session['id'].split('-')[0] == challenge:
         try:
-            client.containers.get(session['id'])
-            random_id = session['id']
+            client.containers.get(session['id'])  # check if container exists
+            random_id = session['id']             # required by template
         except:
-            session.clear()
+            session['id'] == ''
             return redirect(url_for('challenge_page', challenge=challenge))
+    else:
+        session['id'] = challenge + '-' + utils.generate_id()
+        random_id = session['id']  # required by template
 
     return render_template(
         f"{challenge}.html",
