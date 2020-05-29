@@ -120,7 +120,7 @@ def challenge_page(challenge):
             client.containers.get(session['id'])  # check if container exists
             random_id = session['id']             # required by template
         except:
-            session['id'] == ''
+            session.pop('id', None)
             return redirect(url_for('challenge_page', challenge=challenge))
     else:
         session['id'] = challenge + '-' + utils.generate_id()
