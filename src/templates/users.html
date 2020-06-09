@@ -6,21 +6,18 @@
         <script defer>
             window.onload = () => {
                 $("#loginInput")[0].addEventListener("keyup", (e) => {
-                    if (e.keyCode === 13) {
-                      submitNewUser()
-                    }
+                    if (e.keyCode === 13)
+                        submitNewUser()
                 })
 
                 $("#passwordInput")[0].addEventListener("keyup", (e) => {
-                    if (e.keyCode === 13) {
+                    if (e.keyCode === 13)
                         submitNewUser()
-                    }
                 })
 
                 $("#rePasswordInput")[0].addEventListener("keyup", (e) => {
-                    if (e.keyCode === 13) {
+                    if (e.keyCode === 13)
                         submitNewUser()
-                    }
                 })
             }
 

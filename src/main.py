@@ -78,8 +78,7 @@ def login():
 @app.route('/logout', methods=['GET'])
 @login_required
 def logout():
-    del session['login']
-    del session['is_admin']
+    session.clear()
     return redirect('/')
 
 
@@ -118,17 +117,17 @@ def challenge_page(challenge):
     if 'id' in session and session['id'].split('-')[0] == challenge:
         try:
             client.containers.get(session['id'])  # check if container exists
-            random_id = session['id']             # required by template
+            container_name = session['id']             # required by template
         except:
             session.pop('id', None)
             return redirect(url_for('challenge_page', challenge=challenge))
     else:
-        session['id'] = challenge + '-' + utils.generate_id()
-        random_id = session['id']  # required by template
+        session['id'] = challenge + '-' + utils.generate_id() + '-' + session['login']
+        container_name = session['id']  # required by template
 
     return render_template(
-        f"{challenge}.html",
-        user_id=random_id,
+        f'{challenge}.html',
+        container_name=container_name,
         is_logged_in=session.get('login'),
         is_admin=session.get('is_admin')
     )
@@ -153,8 +152,12 @@ def keepalive_container():
 def run_container():
     if 'id' in session:
         challenge = session['id'].split('-')[0]
+        challenge_id = session['id'].split('-')[1]
+        username = ''.join(session['id'].split('-')[2:])
 
         if challenge in enabled_challenges and not utils.container_exists(client, session['id']):
+            if utils.check_user_container_limit(client, username):
+                return jsonify(message='error', reason='Challenge instances limit reached')
             try:
                 threading.Thread(
                     target=enabled_challenges[challenge].run_instance,

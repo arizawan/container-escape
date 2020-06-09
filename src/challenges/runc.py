@@ -34,7 +34,7 @@ class Runc(Challenge):
             host runc binary by leveraging the ability to execute a command as 
             root within container'''
 
-    def run_instance(self, user_id, keepalive_containers):
+    def run_instance(self, container_name, keepalive_containers):
         self.lock.acquire()
         port = utils.get_free_port()
 
@@ -52,7 +52,7 @@ class Runc(Challenge):
                     f'-p {port}:{port}',
                     '--privileged',
                     '--rm',
-                    f'--name {user_id}',
+                    f'--name {container_name}',
                     '-d',
                     '-e DOCKER_HOST=unix:///run/user/1000/docker.sock',
                     '--memory=64m',
@@ -73,24 +73,24 @@ class Runc(Challenge):
             container_id = re.search('[a-z0-9]{64}', result).group(0)
             container = self.client.containers.get(container_id)
             self.run_vulnerable_container(container, port)
-            self.create_nginx_config(user_id, port)
+            self.create_nginx_config(container_name, port)
             keepalive_containers[container.name] = datetime.datetime.now()
-            app.logger.info(f'challenge container created for {user_id}')
+            app.logger.info(f'challenge container created for {container_name}')
         except (docker.errors.BuildError, docker.errors.APIError) as e:
-            app.logger.error(f'container build failed for {user_id}: {e}')
+            app.logger.error(f'container build failed for {container_name}: {e}')
         except Exception as e:
-            app.logger.error(f'unknown error while building container for {user_id}: {e}')
+            app.logger.error(f'unknown error while building container for {container_name}: {e}')
         self.lock.release()
 
-    def remove_instance(self, user_id):
+    def remove_instance(self, container_name):
         try:
-            os.remove(f'/etc/nginx/sites-enabled/containers/{user_id}.conf')
-            app.logger.info(f'removed nginx config for {user_id}')
+            os.remove(f'/etc/nginx/sites-enabled/containers/{container_name}.conf')
+            app.logger.info(f'removed nginx config for {container_name}')
         except OSError as e:
             app.logger.error(f'failed to remove instance: {e}')
 
         try:
-            container = self.client.containers.get(user_id)
+            container = self.client.containers.get(container_name)
             container.stop()
             # This try-except block and while loop below is required, because the
             # stop function from Docker SDK sometimes returns even when container 
@@ -99,17 +99,17 @@ class Runc(Challenge):
             # error, which will be caught, by except block. Otherwise thread will
             # sleep for 1 second and try to get container again.
             try:
-                while self.client.containers.get(user_id):
+                while self.client.containers.get(container_name):
                     time.sleep(0.25)
             except Exception:
                 pass
 
             if container.name in self.solved_challenges:
                 self.solved_challenges.remove(container.name)
-            app.logger.info(f'stopped container for {user_id}')
+            app.logger.info(f'stopped container for {container_name}')
         except docker.errors.APIError as e:
             app.logger.error(f'failed to remove instance: {e}')
-            app.logger.warning(f'container {user_id} might need manual removal')
+            app.logger.warning(f'container {container_name} might need manual removal')
 
 
     def build_challenge(self):
@@ -122,8 +122,8 @@ class Runc(Challenge):
         self.client.images.build(tag='runc_vuln_host', path='./containers/runc/')
         app.logger.info('runc challenge image successfully built')
 
-    def create_nginx_config(self, user_id, port):
-        config =  'location /challenges/runc/%s/ {\n' % user_id
+    def create_nginx_config(self, container_name, port):
+        config =  'location /challenges/runc/%s/ {\n' % container_name
         config += '    proxy_pass http://127.0.0.1:%s/;\n' % port
         config += '    proxy_http_version 1.1;\n'
         config += '    proxy_set_header X-Real-IP $remote_addr;\n'
@@ -131,7 +131,7 @@ class Runc(Challenge):
         config += '    proxy_set_header Connection "Upgrade";\n'
         config += '}\n'
 
-        config_path = f'/etc/nginx/sites-enabled/containers/{user_id}.conf'
+        config_path = f'/etc/nginx/sites-enabled/containers/{container_name}.conf'
         try:
             with open(config_path, 'w+') as f:
                 f.write(config)
@@ -141,7 +141,7 @@ class Runc(Challenge):
         res = subprocess.call(['/usr/sbin/nginx', '-s', 'reload'])
         if res != 0:
             raise Exception('nginx reload failed (non zero exit code)')
-        app.logger.info(f'nginx config created and reloaded for {user_id}')
+        app.logger.info(f'nginx config created and reloaded for {container_name}')
 
     def run_vulnerable_container(self, container, port):
         # check if docker is running

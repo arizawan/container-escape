@@ -123,3 +123,15 @@ def container_exists(client, session_id):
             app.logger.debug(f'container {container.name} that user tries to spawn already exists')
             return True
     return False
+
+def check_user_container_limit(client, username):
+    instances = 0
+    for container in client.containers.list():
+        try:
+            container_username = ''.join(container.name.split('-')[2:])
+            if container_username == username:
+                instances += 1
+        except IndexError:
+            continue
+    # user may run up to 4 challenge containers across all of the challenges
+    return instances > 4

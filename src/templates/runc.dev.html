@@ -21,99 +21,40 @@
         <button type="button" class="btn btn-dark" onClick="sendRevertRequest()">Revert</button>
         <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#descriptionModal">Description</button>
     </div>
-    <script>
-        var terminal = document.createElement('iframe')
-        const timeout_counter = 45
-        var intervalId = 0
-        var winIntervalId = 0
-        var keepAliveIntervalId = 0
-
-        const checkWin = () => {
-            let req = new XMLHttpRequest()
-            req.open('GET', '/api/container/status', false)
-            req.send()
-            if (req.status == 200) {
-                resp = JSON.parse(req.response)
-                if (resp['message'] == 'solved') {
-                    clearInterval(winIntervalId)
-                    winIntervalId = 0
-                    $('#winModal').modal('show')
-                }
-            }
+    <script defer>
+        const state = {
+            NOT_RUNNING: 'not running',
+            START_REQUESTED: 'start requested',
+            PROBING: 'probing',
+            RUNNING: 'running',
+            SOLVED: 'solved'
         }
-
-        const keepAlive = () => {
-            let req = new XMLHttpRequest()
-            req.open('GET', '/api/container/keepalive', false)
-            req.send()
-        }
-
-        const loadTerminal = () => {
-            document.getElementById('loadingBox').innerHTML = "<iframe width=\"100%\" height=\"500px\" src=\"/challenges/runc/{{ container_name }}/\" ></iframe>"
-            if (keepAliveIntervalId == 0) {
-                keepAliveIntervalId = setInterval(keepAlive, 30000)
-            }
-
-            if (winIntervalId == 0) {
-                winIntervalId = setInterval(checkWin, 3000)
-            }
-        }
-
-        const sendCheckRequest = () => {
-            if (timeout_counter == 0) {
-                loadingBox.innerHTML = "<p class=\"d-flex justify-content-center\" >Something went wrong :(</p>"
-                clearInterval(intervalId)
-            }
-            let req = new XMLHttpRequest()
-            req.open('GET', '/challenges/runc/{{ container_name }}/', false)
-            req.send()
-            if (req.status == 200) {
-                loadTerminal()
-                clearInterval(intervalId)
-            }
-            timeout_counter--
-        }
+        var current_state = state.NOT_RUNNING
 
         const sendRunRequest = () => {
-            let req = new XMLHttpRequest()
-            req.open('GET', '/api/container/run', false)
-            req.send()
+            console.log('sendRunRequest ran');
+            (async () => {
+                const response = await fetch('/api/container/run', {
+                    credentials: 'include'
+                })
+                console.log(response.json())
+            })()
         }
 
-        const sendRevertRequest = () => {
-            clearInterval(winIntervalId)
-            winIntervalId = 0
-
-            let req = new XMLHttpRequest()
-            req.open('GET', '/api/container/revert', true)
-            req.send()
-
-            document.getElementById('loadingBox').innerHTML = `<div class="d-flex justify-content-center">
-                    <div class="spinner-border" role="status">
-                        <span class="sr-only">Loading...</span>
-                    </div>
-                </div>
-                </br>
-                <div class="d-flex justify-content-center">
-                    <p> Reverting container.</p>
-                </div>`
-
-            timeout_counter = 60
-            intervalId = setInterval(sendCheckRequest, 3000)
-        }
-
-        (function startChallenge() {
-            let req = new XMLHttpRequest()
-            req.open('GET', '/challenges/runc/{{ container_name }}/', false)
-            req.send()
-            if (req.status != 200) {
-                sendRunRequest()
-                intervalId = setInterval(sendCheckRequest, 3000)
-            } else {
-                loadTerminal()
-                terminal.src = '/challenges/runc/{{ container_name }}/'
+        const mainLoop = () => {
+            console.log('mainLoop ran')
+            switch (current_state) {
+                case state.NOT_RUNNING: 
+                    sendRunRequest()
+                    break
+                case state.START_REQUESTED: ; break;
+                case state.PROBING: ; break;
+                case state.RUNNING: ; break;
+                case state.SOLVED: ; break;
             }
-        })()
+        }
+        
+        setInterval(mainLoop, 1000)
     </script>
     <div class="modal fade" id="descriptionModal" tabindex="-1" role="dialog" aria-labelledby="Description" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable" role="document">
