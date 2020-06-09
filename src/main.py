@@ -158,7 +158,7 @@ def run_container():
             try:
                 threading.Thread(
                     target=enabled_challenges[challenge].run_instance,
-                    args=(session['id'],)
+                    args=(session['id'], keepalive_containers)
                 ).start()
                 return jsonify(message='ok'), 200
             except Exception as e:
@@ -178,7 +178,7 @@ def revert_container():
                 enabled_challenges[challenge].remove_instance(session['id'])
                 threading.Thread(
                     target=enabled_challenges[challenge].run_instance,
-                    args=(session['id'],)
+                    args=(session['id'], keepalive_containers)
                 ).start()
                 return jsonify(message='ok'), 200
             except Exception as e:

@@ -1,5 +1,6 @@
 import subprocess
 import threading
+import datetime
 import docker
 import time
 import os
@@ -33,7 +34,7 @@ class Runc(Challenge):
             host runc binary by leveraging the ability to execute a command as 
             root within container'''
 
-    def run_instance(self, user_id):
+    def run_instance(self, user_id, keepalive_containers):
         self.lock.acquire()
         port = utils.get_free_port()
 
@@ -56,7 +57,7 @@ class Runc(Challenge):
                     '-e DOCKER_HOST=unix:///run/user/1000/docker.sock',
                     '--memory=64m',
                     '--memory-swap=64m',
-                    #'--cpu-period=1000',
+                    # '--cpus=0.25',
                     'runc_vuln_host',
                     '--experimental',
                 ]
@@ -66,12 +67,14 @@ class Runc(Challenge):
             # we cannot be sure that command output will be only id of spawned
             # container. That's why regex below is required to find this id.
             # Example:
-            # WARNING: Your kernel does not support swap limit capabilities or the cgroup is not mounted. Memory limited without swap.
-            # ad9d0928ad507baa9e4fadcf6a21c953248bcdfc1dd48988aad98efac870661d
+            #   WARNING: Your kernel does not support swap limit capabilities or
+            #   the cgroup is not mounted. Memory limited without swap.
+            #   ad9d0928ad507baa9e4fadcf6a21c953248bcdfc1dd48988aad98efac870661d
             container_id = re.search('[a-z0-9]{64}', result).group(0)
             container = self.client.containers.get(container_id)
             self.run_vulnerable_container(container, port)
             self.create_nginx_config(user_id, port)
+            keepalive_containers[container.name] = datetime.datetime.now()
             app.logger.info(f'challenge container created for {user_id}')
         except (docker.errors.BuildError, docker.errors.APIError) as e:
             app.logger.error(f'container build failed for {user_id}: {e}')
@@ -161,6 +164,12 @@ class Runc(Challenge):
             raise Exception(f'internal container run failed:\n{run_result[1].decode("utf-8")}')
 
         app.logger.info(f'internal container created for {container.name}')
+        try:
+            # docker '--cpus' option in not avaliable in python SDK, but options below are equal to '--cpus=0.25'
+            container.update(cpu_period=100000, cpu_quota=25000)
+        except docker.errors.APIError:
+            app.logger.critical(f'failed to enforce CPU limits on {container.name}, removing container')
+            container.stop()
 
     def win_check(self):
         while True:
