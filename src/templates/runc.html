@@ -14,11 +14,11 @@
                 </div>
                 </br>
                 <div class="d-flex justify-content-center">
-                    <p> Building container. It might take a few seconds.</p>
+                    <p>Building container, it might take a few seconds</p>
                 </div>
             </div>
         </div>
-        <button type="button" class="btn btn-dark" onClick="sendRevertRequest()">Revert</button>
+        <button type="button" class="btn btn-dark" id="revertButton" onClick="sendRevertRequest()">Revert</button>
         <button type="button" class="btn btn-dark" data-toggle="modal" data-target="#descriptionModal">Description</button>
     </div>
     <script>
@@ -57,6 +57,7 @@
             if (winIntervalId == 0) {
                 winIntervalId = setInterval(checkWin, 3000)
             }
+            $('#revertButton')[0].disabled = false
         }
 
         const sendCheckRequest = () => {
@@ -81,6 +82,7 @@
         }
 
         const sendRevertRequest = () => {
+            $('#revertButton')[0].disabled = true
             clearInterval(winIntervalId)
             winIntervalId = 0
 
@@ -95,7 +97,7 @@
                 </div>
                 </br>
                 <div class="d-flex justify-content-center">
-                    <p> Reverting container.</p>
+                    <p>Reverting container</p>
                 </div>`
 
             timeout_counter = 60
@@ -107,6 +109,7 @@
             req.open('GET', '/challenges/runc/{{ container_name }}/', false)
             req.send()
             if (req.status != 200) {
+                $('#revertButton')[0].disabled = true
                 sendRunRequest()
                 intervalId = setInterval(sendCheckRequest, 3000)
             } else {
@@ -126,9 +129,9 @@
                 </div>
                 <div class="modal-body">
                   <p>
-                    The goal of this challenge is to escape from the container. Inside container there's <i>ttyd</i> process running, which gives you remote access to the container. This process is out of scope of this challenge so please don't pay too much attention to that.
+                    The goal of this challenge is to escape from the container. Inside container there's <i>ttyd</i> process running, which gives you remote access to the container. This process is out of the scope of this challenge, so please don't pay too much attention to it.
                 </p>
-                <p> In order to escape from the container you will have to make use of two informations:
+                <p> In order to escape from the container, you will have to make use of two information:
                     <ul>
                         <li>Container was spawned using <b><i>runc ver. 1.0.0.rc6</i></b></li>
                         <li>Administrator is executing command <b><i>docker exec [container] sh</i></b> every minute</li>
