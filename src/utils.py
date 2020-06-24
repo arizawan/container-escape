@@ -85,7 +85,7 @@ def check_privs():
 
 def load_challenges(enabled_challenges, client, solved_challenges):
     for filename in os.listdir('./challenges'):
-        if filename.endswith('.py') and filename != 'challenge.py':
+        if filename.endswith('.py') and filename != 'challenge.py' and filename != 'challenge_template.py':
             classname = filename.split('.py')[-2]
             new_challenge = importlib.import_module('challenges.' + classname)
             new_challenge_init = getattr(new_challenge, classname.capitalize())

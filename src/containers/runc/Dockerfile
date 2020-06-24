@@ -1,5 +1,4 @@
 FROM docker:dind-rootless
-#FROM docker:dind
 
 COPY runc-1.0.0-rc6-vulnerable /usr/local/bin/runc
 COPY ./runc_vuln.tar /opt
